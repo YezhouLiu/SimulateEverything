@@ -8,6 +8,10 @@ from models.public_goods_game import PublicGoodsGame
 from models.trust_game import TrustGame
 from models.battle_of_sexes import BattleOfSexes
 from models.dictator_game import DictatorGame
+from models.repeated_prisoners_dilemma import RepeatedPrisonersDilemma
+from models.signaling_game import SignalingGame
+from models.colonel_blotto_game import ColonelBlottoGame
+from models.ultimatum_game import UltimatumGame
 from visualize import plot_payoff_matrix, get_game_labels
 
 st.set_page_config(page_title="Game Theory Simulator", layout="centered")
@@ -21,7 +25,11 @@ MODEL_MAP = {
     PublicGoodsGame.name: PublicGoodsGame,
     TrustGame.name: TrustGame,
     BattleOfSexes.name: BattleOfSexes,
-    DictatorGame.name: DictatorGame
+    DictatorGame.name: DictatorGame,
+    RepeatedPrisonersDilemma.name: RepeatedPrisonersDilemma,
+    SignalingGame.name: SignalingGame,
+    ColonelBlottoGame.name: ColonelBlottoGame,
+    UltimatumGame.name: UltimatumGame
 }
 
 model_name = st.sidebar.selectbox("Select Game Model", list(MODEL_MAP.keys()))
@@ -121,6 +129,143 @@ elif model_name == "Dictator Game":
     if st.button("Run Game"):
         res = model.play(amount_given)
         st.success(f"Result: Dictator Keeps {res[0]}, Recipient Gets {res[1]}")
+
+elif model_name == "Repeated Prisoner's Dilemma":
+    R = st.sidebar.slider("Reward for Cooperation (R)", 0, 10, 3)
+    T = st.sidebar.slider("Temptation to Betray (T)", 0, 10, 5)
+    S = st.sidebar.slider("Sucker's Payoff (S)", 0, 10, 0)
+    P = st.sidebar.slider("Punishment for Mutual Betrayal (P)", 0, 10, 1)
+    rounds = st.sidebar.slider("Number of Rounds", 1, 20, 5)
+    discount = st.sidebar.slider("Discount Factor", 0.0, 1.0, 0.9, 0.1)
+    
+    model = ModelClass(R, T, S, P, rounds, discount)
+    
+    st.write("#### Strategy Selection")
+    strategies = ["Always Cooperate", "Always Betray", "Tit-for-Tat", 
+                  "Suspicious Tit-for-Tat", "Pavlov (Win-Stay, Lose-Shift)"]
+    
+    strategy1 = st.selectbox("Player 1 Strategy", strategies, index=2)
+    strategy2 = st.selectbox("Player 2 Strategy", strategies, index=0)
+    
+    strat_idx1 = strategies.index(strategy1)
+    strat_idx2 = strategies.index(strategy2)
+    if st.button("Run Game"):
+        result = model.play_with_strategies(strat_idx1, strat_idx2)
+        scores = result["scores"]
+        history1 = result["history1"]
+        history2 = result["history2"]
+        st.success(f"Result: Player 1 Score {scores[0]:.2f}, Player 2 Score {scores[1]:.2f}")
+        
+        # Show game history
+        st.write("#### Game History")
+        history_data = []
+        for i in range(len(history1)):
+            history_data.append([
+                i+1, 
+                "Cooperate" if history1[i] == 0 else "Betray",
+                "Cooperate" if history2[i] == 0 else "Betray"
+            ])
+        
+        st.table({
+            "Round": [row[0] for row in history_data],
+            "Player 1": [row[1] for row in history_data],
+            "Player 2": [row[2] for row in history_data]
+        })
+
+elif model_name == "Signaling Game":
+    high_sender_high_signal = st.sidebar.slider("High Type High Signal Payoff", 0, 15, 10)
+    high_sender_low_signal = st.sidebar.slider("High Type Low Signal Payoff", 0, 15, 5)
+    low_sender_high_signal = st.sidebar.slider("Low Type High Signal Payoff", 0, 15, 8)
+    low_sender_low_signal = st.sidebar.slider("Low Type Low Signal Payoff", 0, 15, 7)
+    
+    correct_receiver = st.sidebar.slider("Correct Receiver Payoff", 0, 10, 6)
+    incorrect_receiver = st.sidebar.slider("Incorrect Receiver Payoff", 0, 10, 2)
+    
+    high_type_prob = st.sidebar.slider("High Type Probability", 0.0, 1.0, 0.5, 0.1)
+    
+    model = ModelClass(high_sender_high_signal, high_sender_low_signal,
+                      low_sender_high_signal, low_sender_low_signal,
+                      correct_receiver, incorrect_receiver, high_type_prob)
+    
+    st.write("#### Strategy Selection")
+    
+    sender_strategies = ["Separating (Honest)", "Pooling High", "Pooling Low", "Perverse (Dishonest)"]
+    receiver_strategies = ["Trust Signals", "Distrust Signals", "Always High", "Always Low"]
+    
+    sender_strategy = st.selectbox("Sender Strategy", sender_strategies, index=0)
+    receiver_strategy = st.selectbox("Receiver Strategy", receiver_strategies, index=0)
+    
+    sender_idx = sender_strategies.index(sender_strategy)
+    receiver_idx = receiver_strategies.index(receiver_strategy)
+    
+    if st.button("Run Game"):
+        res = model.play(sender_idx, receiver_idx)
+        st.success(f"Result: Sender Expected Payoff {res[0]:.2f}, Receiver Expected Payoff {res[1]:.2f}")
+
+elif model_name == "Colonel Blotto Game":
+    resources = st.sidebar.slider("Total Resources", 5, 30, 10)
+    battlefields = st.sidebar.slider("Number of Battlefields", 2, 5, 3)
+    
+    model = ModelClass(resources, battlefields)
+    
+    st.write("#### Strategy Selection")
+    
+    strategies = ["Equal Distribution", "Front-Loaded", "Back-Loaded", "Random Distribution"]
+    
+    strategy1 = st.selectbox("Player 1 Strategy", strategies, index=0)
+    strategy2 = st.selectbox("Player 2 Strategy", strategies, index=1)
+    
+    strat_idx1 = strategies.index(strategy1)
+    strat_idx2 = strategies.index(strategy2)
+    
+    if st.button("Run Game"):
+        wins1, wins2 = model.play_simple(strat_idx1, strat_idx2)
+        
+        # Calculate the resource allocation for display
+        allocation1 = model._generate_allocation(strat_idx1)
+        allocation2 = model._generate_allocation(strat_idx2)
+        
+        st.success(f"Result: Player 1 won {wins1} battlefields, Player 2 won {wins2} battlefields")
+        
+        # Show resource allocation
+        st.write("#### Resource Allocation")
+        
+        battlefield_labels = [f"Battlefield {i+1}" for i in range(battlefields)]
+        
+        st.table({
+            "Battlefield": battlefield_labels,
+            "Player 1 Resources": allocation1,
+            "Player 2 Resources": allocation2
+        })
+
+elif model_name == "Ultimatum Game":
+    total_amount = st.sidebar.slider("Total Amount", 1, 20, 10)
+    
+    model = ModelClass(total_amount)
+    
+    st.write("#### Strategy Selection")
+    
+    proposer_strategies = ["Fair Split (50%)", "Slightly Unfair (30%)", 
+                          "Very Unfair (10%)", "Almost All (90%)"]
+    responder_strategies = ["Accept Anything", "Require Fair (50%+)", 
+                           "Require Somewhat Fair (30%+)", "Rational (Accept any non-zero)"]
+    
+    proposer_strategy = st.selectbox("Proposer Strategy", proposer_strategies, index=0)
+    responder_strategy = st.selectbox("Responder Strategy", responder_strategies, index=1)
+    
+    proposer_idx = proposer_strategies.index(proposer_strategy)
+    responder_idx = responder_strategies.index(responder_strategy)
+    
+    if st.button("Run Game"):
+        res = model.play_with_strategy(proposer_idx, responder_idx)
+        
+        # Display result with acceptance status
+        if res[0] == 0 and res[1] == 0:
+            status = "❌ Offer Rejected"
+        else:
+            status = "✅ Offer Accepted"
+            
+        st.success(f"Result: {status} | Proposer Payoff {res[0]}, Responder Payoff {res[1]}")
 
 st.markdown("---")
 st.markdown("**Model Introduction:**")

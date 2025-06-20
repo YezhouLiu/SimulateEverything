@@ -3,6 +3,7 @@
 This project is a game theory simulator supporting multiple classic game models, with an interactive UI built using Streamlit. It allows users to intuitively experience and compare the characteristics of different models.
 
 ## Supported Game Models
+### Basic models
 - **Prisoner's Dilemma**: Classic non-zero-sum game about cooperation and betrayal
 - **Stag Hunt**: Game examining trust and collaboration with risk
 - **Coordination Game**: Demonstrates the importance of coordination in social situations
@@ -11,6 +12,12 @@ This project is a game theory simulator supporting multiple classic game models,
 - **Trust Game**: Economic game exploring trust and reciprocity
 - **Battle of Sexes**: Coordination game with conflict of interest
 - **Dictator Game**: Simple economic game exploring fairness and altruism
+
+### Adbanced models
+- **Repeated Prisoner's Dilemma**: Multi-round version with adaptive strategies exploring cooperation emergence
+- **Signaling Game**: Asymmetric information game modeling communication when incentives aren't fully aligned
+- **Colonel Blotto Game**: Strategic resource allocation across multiple battlefields
+- **Ultimatum Game**: Negotiation game exploring fairness, offers and responses
 
 ## Main Features
 - Supports simulation and parameter setting for various game models
