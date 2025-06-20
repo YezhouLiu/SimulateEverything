@@ -27,6 +27,10 @@ This project is a game theory simulator supporting multiple classic game models,
    streamlit run app.py
    ```
 
+## Screenshots
+
+![Game Theory Simulator Screenshot](images/screenshot_v1.png)
+
 ## Directory Structure
 - app.py: Streamlit frontend entry
 - models/: Implementations of each game model
