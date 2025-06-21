@@ -13,6 +13,7 @@ from models.signaling_game import SignalingGame
 from models.colonel_blotto_game import ColonelBlottoGame
 from models.ultimatum_game import UltimatumGame
 from visualize import plot_payoff_matrix, get_game_labels
+from models.life_expectancy_calculator_model import LifeExpectancyCalculator
 
 st.set_page_config(page_title="Game Theory Simulator", layout="centered")
 st.title("🎲 Game Theory Simulator")
@@ -29,7 +30,9 @@ MODEL_MAP = {
     RepeatedPrisonersDilemma.name: RepeatedPrisonersDilemma,
     SignalingGame.name: SignalingGame,
     ColonelBlottoGame.name: ColonelBlottoGame,
-    UltimatumGame.name: UltimatumGame
+    UltimatumGame.name: UltimatumGame,
+    "Stag Hunt (Dynamic Mode)": StagHunt,
+    LifeExpectancyCalculator.name: LifeExpectancyCalculator
 }
 
 model_name = st.sidebar.selectbox("Select Game Model", list(MODEL_MAP.keys()))
@@ -266,6 +269,82 @@ elif model_name == "Ultimatum Game":
             status = "✅ Offer Accepted"
             
         st.success(f"Result: {status} | Proposer Payoff {res[0]}, Responder Payoff {res[1]}")
+
+elif model_name == "Stag Hunt (Dynamic Mode)":
+    stag = st.sidebar.slider("Base Stag Score", 0, 10, 4)
+    hare = st.sidebar.slider("Base Hare Score", 0, 10, 2)
+    fail = st.sidebar.slider("Base Fail Score", 0, 10, 0)
+    rounds = st.sidebar.slider("Number of Rounds", 1, 20, 5)
+
+    model = ModelClass(stag, hare, fail)
+    st.write("#### Dynamic Player Choices")
+
+    history = []
+    for round_number in range(1, rounds + 1):
+        st.write(f"### Round {round_number}")
+        action1 = st.radio(f"Player 1 (Round {round_number})", ["Hunt Stag", "Hunt Hare"], horizontal=True, key=f"action1_{round_number}")
+        action2 = st.radio(f"Player 2 (Round {round_number})", ["Hunt Stag", "Hunt Hare"], horizontal=True, key=f"action2_{round_number}")
+
+        if st.button(f"Run Round {round_number}", key=f"run_round_{round_number}"):
+            res = model.play_dynamic(0 if action1 == "Hunt Stag" else 1, 0 if action2 == "Hunt Stag" else 1, round_number)
+            history.append((round_number, res[0], res[1]))
+            st.success(f"Result: Player 1 Score {res[0]}, Player 2 Score {res[1]}")
+
+    if history:
+        st.write("#### Game History")
+        st.table({
+            "Round": [row[0] for row in history],
+            "Player 1 Score": [row[1] for row in history],
+            "Player 2 Score": [row[2] for row in history]
+        })
+
+elif model_name == "Life Expectancy Calculator":
+    age = st.sidebar.number_input("Age", min_value=0, max_value=120, value=30)
+    income = st.sidebar.number_input("Annual Income ($)", min_value=0, value=50000)
+    smoking = st.sidebar.selectbox("Do you smoke?", ["Yes", "No"]) == "Yes"
+    drinking = st.sidebar.selectbox("Do you drink alcohol?", ["Yes", "No"]) == "Yes"
+    exercise = st.sidebar.selectbox("Do you exercise regularly?", ["Yes", "No"]) == "Yes"
+    gender = st.sidebar.selectbox("Gender", ["Male", "Female"])
+
+    # Add height and weight input fields
+    height = st.sidebar.number_input("Height (cm)", min_value=50, max_value=250, value=170)
+    weight = st.sidebar.number_input("Weight (kg)", min_value=20, max_value=300, value=70)
+
+    # Load country list from the CSV file with custom delimiter
+    import pandas as pd
+    country_data = pd.read_csv(r"data/life/life2025.csv", sep=r'\s+')
+    country_data.columns = country_data.columns.str.strip().str.replace('"', '')
+    country_data['Country'] = country_data['Country'].str.strip().str.replace('"', '')
+    countries = sorted(country_data['Country'].tolist())
+
+    # Combine dropdown menu and text input for country selection
+    region_dropdown = st.sidebar.selectbox("Select Country from Dropdown", countries, index=countries.index("New Zealand") if "New Zealand" in countries else 0)
+    region_input = st.sidebar.text_input("Or Type Country", value="", placeholder="Type to search...")
+
+    # Finalize region selection
+    region = region_input.strip() if region_input.strip() else region_dropdown
+
+    if region_input.strip() and region_input.strip() != region_dropdown:
+        st.sidebar.warning("You have entered a country different from the dropdown selection. Using the typed country.")
+
+    # Add checkboxes for common chronic diseases
+    diabetes = st.sidebar.checkbox("Diabetes")
+    hypertension = st.sidebar.checkbox("Hypertension")
+    heart_disease = st.sidebar.checkbox("Heart Disease")
+
+    # Collect selected diseases into a list
+    medical_history = []
+    if diabetes:
+        medical_history.append("diabetes")
+    if hypertension:
+        medical_history.append("hypertension")
+    if heart_disease:
+        medical_history.append("heart_disease")
+
+    if st.sidebar.button("Calculate Life Expectancy"):
+        life_expectancy = LifeExpectancyCalculator.calculate(age, income, smoking, drinking, exercise, region, height, weight, gender, medical_history)
+        st.write(f"Your estimated remaining life expectancy is {life_expectancy['remaining_life_expectancy']:.2f} years.")
+        st.write(f"Your estimated total life expectancy is {life_expectancy['total_life_expectancy']:.2f} years.")
 
 st.markdown("---")
 st.markdown("**Model Introduction:**")
